@@ -5,7 +5,26 @@ import {useNavigate} from 'react-router-dom'
 import { useSelector } from 'react-redux';
 import api from '../configs/api';
 import toast from 'react-hot-toast';
-import pdfToText from 'pdfjs-dist';
+import * as pdfjsLib from 'pdfjs-dist';
+
+// Must point to the matching worker — no default export exists in pdfjs-dist
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.mjs',
+  import.meta.url
+).toString();
+
+// Drop-in replacement for the old pdfToText(file) call signature
+const pdfToText = async (file) => {
+  const buffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+  let text = '';
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    text += content.items.map(item => item.str).join(' ') + '\n';
+  }
+  return text;
+};
 
 const Dashboard = () => {
 
